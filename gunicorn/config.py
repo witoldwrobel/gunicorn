@@ -767,6 +767,19 @@ class LimitRequestFieldSize(Setting):
         """
 
 
+class MaxBufferSize(Setting):
+    name = "max_buffer_size"
+    section = "Security"
+    cli = ["--max-buffer-size"]
+    meta = "INT"
+    validator = validate_pos_int
+    type = int
+    default = 100000000  # 100 MB
+    desc = """\
+        Limit the allowed size of an HTTP request file.
+        """
+
+
 class Reload(Setting):
     name = "reload"
     section = 'Debugging'

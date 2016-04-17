@@ -108,10 +108,11 @@ class TornadoWorker(Worker):
              # options
              del _ssl_opt["do_handshake_on_connect"]
              del _ssl_opt["suppress_ragged_eofs"]
-             server = server_class(app, io_loop=self.ioloop,
-                    ssl_options=_ssl_opt)
+             server = server_class(app, io_loop=self.ioloop, ssl_options=_ssl_opt,
+                                   max_buffer_size=self.cfg.max_buffer_size)
         else:
-            server = server_class(app, io_loop=self.ioloop)
+            server = server_class(app, io_loop=self.ioloop,
+                                  max_buffer_size=self.cfg.max_buffer_size)
 
         self.server = server
         self.server_alive = True
