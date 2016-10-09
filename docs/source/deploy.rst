@@ -213,7 +213,7 @@ are configurations files to set the Gunicorn launch in systemd and
 the interfaces on which Gunicorn will listen. The sockets will be managed by
 systemd:
 
-**gunicorn.service**::
+**/etc/systemd/system/gunicorn.service**::
 
     [Unit]
     Description=gunicorn daemon
@@ -233,7 +233,7 @@ systemd:
     [Install]
     WantedBy=multi-user.target
 
-**gunicorn.socket**::
+**/etc/systemd/system/gunicorn.socket**::
 
     [Unit]
     Description=gunicorn socket
@@ -246,9 +246,20 @@ systemd:
     [Install]
     WantedBy=sockets.target
 
-**tmpfiles.d/gunicorn.conf**::
+**/usr/lib/tmpfiles.d/gunicorn.conf**::
 
     d /run/gunicorn 0755 someuser someuser -
+
+Next enable the services so they autostart at boot::
+
+    systemctl enable gunicorn.service
+    systemctl enable gunicorn.socket
+
+Either reboot, or start the services manually::
+
+    systemctl start gunicorn.service
+    systemctl start gunicorn.socket
+
 
 After running ``curl http://localhost:9000/``, Gunicorn should start and you
 should see something like that in logs::
@@ -265,6 +276,10 @@ utility::
 
     kill -USR1 $(cat /var/run/gunicorn.pid)
 
+.. note:: overriding the LOGGING dictionary requires to set `disable_existing_loggers: False`` to not interfere with the Gunicorn logging.
+
+.. warning:: Gunicorn error log is here to log errors from Gunicorn, not from another application.
+
 .. _Nginx: http://www.nginx.org
 .. _Boom: https://github.com/rakyll/boom
 .. _`example configuration`: http://github.com/benoitc/gunicorn/blob/master/examples/nginx.conf
@@ -276,4 +291,4 @@ utility::
 .. _`logging configuration file`: https://github.com/benoitc/gunicorn/blob/master/examples/logging.conf
 .. _Virtualenv: http://pypi.python.org/pypi/virtualenv
 .. _Systemd: http://www.freedesktop.org/wiki/Software/systemd
-.. _Gaffer <http://gaffer.readthedocs.org/en/latest/index.html>:
+.. _Gaffer <https://gaffer.readthedocs.io/en/latest/index.html>:

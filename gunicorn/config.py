@@ -14,6 +14,7 @@ except ImportError:  # python 2.6
     from . import argparse_compat as argparse
 import os
 import pwd
+import re
 import ssl
 import sys
 import textwrap
@@ -191,6 +192,36 @@ class Config(object):
             env[k] = v
 
         return env
+
+    @property
+    def sendfile(self):
+        if self.settings['sendfile'].get() is not None:
+            return False
+
+        if 'SENDFILE' in os.environ:
+            sendfile = os.environ['SENDFILE'].lower()
+            return sendfile in ['y', '1', 'yes', 'true']
+
+        return True
+
+    @property
+    def paste_global_conf(self):
+        raw_global_conf = self.settings['raw_paste_global_conf'].get()
+        if raw_global_conf is None:
+            return None
+
+        global_conf = {}
+        for e in raw_global_conf:
+            s = _compat.bytes_to_str(e)
+            try:
+                k, v = re.split(r'(?<!\\)=', s, 1)
+            except ValueError:
+                raise RuntimeError("environment setting %r invalid" % s)
+            k = k.replace('\\=', '=')
+            v = v.replace('\\=', '=')
+            global_conf[k] = v
+
+        return global_conf
 
 
 class SettingMeta(type):
@@ -762,8 +793,12 @@ class LimitRequestFieldSize(Setting):
     desc = """\
         Limit the allowed size of an HTTP request header field.
 
-        Value is a number from 0 (unlimited) to 8190. to set the limit
-        on the allowed size of an HTTP request header field.
+        Value is a positive number or 0. Setting it to 0 will allow unlimited
+        header field sizes.
+
+        .. warning::
+           Setting this parameter to a very high or unlimited value can open
+           up for DDOS attacks.
         """
 
 
@@ -816,7 +851,7 @@ class Spew(Setting):
 class ConfigCheck(Setting):
     name = "check_config"
     section = "Debugging"
-    cli = ["--check-config", ]
+    cli = ["--check-config"]
     validator = validate_bool
     action = "store_true"
     default = False
@@ -849,13 +884,19 @@ class Sendfile(Setting):
     validator = validate_bool
     action = "store_const"
     const = False
+
     desc = """\
         Disables the use of ``sendfile()``.
+
+        If not set, the value of the ``SENDFILE`` environment variable is used
+        to enable or disable its usage.
 
         .. versionadded:: 19.2
         .. versionchanged:: 19.4
            Swapped ``--sendfile`` with ``--no-sendfile`` to actually allow
            disabling.
+        .. versionchanged:: 19.6
+           added support for the ``SENDFILE`` environment variable
         """
 
 
@@ -930,6 +971,7 @@ class WorkerTmpDir(Setting):
         If not set, the default temporary directory will be used.
         """
 
+
 class User(Setting):
     name = "user"
     section = "Server Mechanics"
@@ -979,6 +1021,23 @@ class Umask(Setting):
         with ``int(value, 0)`` (``0`` means Python guesses the base, so values
         like ``0``, ``0xFF``, ``0022`` are valid for decimal, hex, and octal
         representations)
+        """
+
+
+class Initgroups(Setting):
+    name = "initgroups"
+    section = "Server Mechanics"
+    cli = ["--initgroups"]
+    validator = validate_bool
+    action = 'store_true'
+    default = False
+
+    desc = """\
+        If true, set the worker process's group access list with all of the
+        groups of which the specified username is a member, plus the specified
+        group id.
+
+        .. versionadded:: 19.7
         """
 
 
@@ -1055,7 +1114,7 @@ class AccessLog(Setting):
     desc = """\
         The Access log file to write to.
 
-        ``'-'`` means log to stderr.
+        ``'-'`` means log to stdout.
         """
 
 
@@ -1069,30 +1128,31 @@ class AccessLogFormat(Setting):
     desc = """\
         The access log format.
 
-        ==========  ===========
-        Identifier  Description
-        ==========  ===========
-        h           remote address
-        l           ``'-'``
-        u           user name
-        t           date of the request
-        r           status line (e.g. ``GET / HTTP/1.1``)
-        m           request method
-        U           URL path without query string
-        q           query string
-        H           protocol
-        s           status
-        B           response length
-        b           response length or ``'-'`` (CLF format)
-        f           referer
-        a           user agent
-        T           request time in seconds
-        D           request time in microseconds
-        L           request time in decimal seconds
-        p           process ID
-        {Header}i   request header
-        {Header}o   response header
-        ==========  ===========
+        ===========  ===========
+        Identifier   Description
+        ===========  ===========
+        h            remote address
+        l            ``'-'``
+        u            user name
+        t            date of the request
+        r            status line (e.g. ``GET / HTTP/1.1``)
+        m            request method
+        U            URL path without query string
+        q            query string
+        H            protocol
+        s            status
+        B            response length
+        b            response length or ``'-'`` (CLF format)
+        f            referer
+        a            user agent
+        T            request time in seconds
+        D            request time in microseconds
+        L            request time in decimal seconds
+        p            process ID
+        {Header}i    request header
+        {Header}o    response header
+        {Variable}e  environment variable
+        ===========  ===========
         """
 
 
@@ -1131,6 +1191,20 @@ class Loglevel(Setting):
         * warning
         * error
         * critical
+        """
+
+
+class CaptureOutput(Setting):
+    name = "capture_output"
+    section = "Logging"
+    cli = ["--capture-output"]
+    validator = validate_bool
+    action = 'store_true'
+    default = False
+    desc = """\
+        Redirect stdout/stderr to Error log.
+
+        .. versionadded:: 19.6
         """
 
 
@@ -1727,4 +1801,26 @@ if sys.version_info >= (2, 7):
         default = 'TLSv1'
         desc = """\
         Ciphers to use (see stdlib ssl module's)
+        """
+
+
+class PasteGlobalConf(Setting):
+    name = "raw_paste_global_conf"
+    action = "append"
+    section = "Server Mechanics"
+    cli = ["--paste-global"]
+    meta = "CONF"
+    validator = validate_list_string
+    default = []
+
+    desc = """\
+        Set a PasteDeploy global config variable (key=value).
+
+        The option can be specified multiple times.
+
+        The variables are passed to the the PasteDeploy entrypoint. Ex.::
+
+            $ gunicorn -b 127.0.0.1:8000 --paste development.ini --paste-global FOO=1 --paste-global BAR=2
+
+        .. versionadded:: 20.0
         """

@@ -2,6 +2,78 @@
 Changelog
 =========
 
+19.6.0 / 2016/05/21
+===================
+
+Core & Logging
+++++++++++++++
+
+- improvement of the binary upgrade behaviour using USR2: remove file locking (:issue:`1270`)
+- add the ``--capture-output`` setting to capture stdout/stderr to the log
+file (:issue:`1271`)
+- Allow disabling ``sendfile()`` via the ``SENDFILE`` environment variable
+(:issue:`1252`)
+- fix reload under pycharm (:issue:`1129`)
+
+Workers
++++++++
+
+- fix: make sure to remove the signal from the worker pipe (:issue:`1269`)
+- fix: **gthread** worker, handle removed socket in the select loop
+(:issue:`1258`)
+
+19.5.0 / 2016/05/10
+===================
+
+Core
+++++
+
+- fix: Ensure response to HEAD request won't have message body
+- fix: lock domain socket and remove on last arbiter exit (:issue:`1220`)
+- improvement: use EnvironmentError instead of socket.error (:issue:`939`)
+- add: new ``FORWARDDED_ALLOW_IPS`` environment variable (:issue:`1205`)
+- fix: infinite recursion when destroying sockets (:issue:`1219`)
+- fix: close sockets on shutdown (:issue:`922`)
+- fix: clean up sys.exc_info calls to drop circular refs (:issue:`1228`)
+- fix: do post_worker_init after load_wsgi (:issue:`1248`)
+
+Workers
++++++++
+
+- fix access logging in gaiohttp worker (:issue:`1193`)
+- eventlet: handle QUIT in a new coroutine (:issue:`1217`)
+- gevent: remove obsolete exception clauses in run (:issue:`1218`)
+- tornado: fix extra "Server" response header (:issue:`1246`)
+- fix: unblock the wait loop under python 3.5 in sync worker (:issue:`1256`)
+
+Logging
++++++++
+
+- fix: log message for listener reloading (:issue:`1181`)
+- Let logging module handle traceback printing (:issue:`1201`)
+- improvement: Allow configuring logger_class with statsd_host (:issue:`1188`)
+- fix: traceback formatting (:issue:`1235`)
+- fix: print error logs on stderr and access logs on stdout (:issue:`1184`)
+
+
+Documentation
++++++++++++++
+
+- Simplify installation instructions in gunicorn.org (:issue:`1072`)
+- Fix URL and default worker type in example_config (:issue:`1209`)
+- update django doc url to 1.8 lts (:issue:`1213`)
+- fix: miscellaneous wording corrections (:issue:`1216`)
+- Add PSF License Agreement of selectors.py to NOTICE (:issue: `1226`)
+- document LOGGING overriding (:issue:`1051`)
+- put a note that error logs are only errors from Gunicorn (:issue:`1124`)
+- add a note about the requirements of the threads workers under python 2.x (:issue:`1200`)
+- add access_log_format to config example (:issue:`1251`)
+
+Tests
++++++
+
+- Use more pytest.raises() in test_http.py
+
 19.4.5 / 2016/01/05
 ===================
 
@@ -26,7 +98,7 @@ Core
 
 - improvement: handle HaltServer in manage_workers (:issue:`1095`)
 - fix: Do not rely on sendfile sending requested count (:issue:`1155`)
-- fix: claridy --no-sendfile default (:issue:`1156`)
+- fix: clarify --no-sendfile default (:issue:`1156`)
 - fix: LoggingCatch sendfile failure from no file descriptor (:issue:`1160`)
 
 Logging
@@ -62,7 +134,7 @@ Core
 - fix: make sure that a user is able to access to the logs after dropping a
   privilege (:issue:`1116`)
 - improvement: inherit the `Exception` class where it needs to be (:issue:`997`)
-- fix: make sure headers are always encodedas latin1 RFC 2616 (:issue:`1102`)
+- fix: make sure headers are always encoded as latin1 RFC 2616 (:issue:`1102`)
 - improvement: reduce arbiter noise (:issue:`1078`)
 - fix: don't close the unix socket when the worker exit (:issue:`1088`)
 - improvement: Make last logged worker count an explicit instance var (:issue:`1078`)
@@ -71,7 +143,7 @@ Core
 - fix: catch OSError as well as ValueError on race condition (:issue:`1052`)
 - improve support of ipv6 by backporting urlparse.urlsplit from Python 2.7 to
   Python 2.6.
-- fix: raise InvalidRequestLine when the line contains maliscious data
+- fix: raise InvalidRequestLine when the line contains malicious data
   (:issue:`1023`)
 - fix: fix argument to disable sendfile
 - fix: add gthread to the list of supported workers (:issue:`1011`)
@@ -84,7 +156,7 @@ Logging
 +++++++
 
 - add new parameters to access log (:issue:`1132`)
-- fix: make sure that files handles are correctly reopenebd on HUP
+- fix: make sure that files handles are correctly reopened on HUP
   (:issue:`627`)
 - include request URL in error message (:issue:`1071`)
 - get username in access logs (:issue:`1069`)

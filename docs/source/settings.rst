@@ -172,7 +172,9 @@ timeout
 * ``-t INT, --timeout INT``
 * ``30``
 
-Workers silent for more than this many seconds are killed and restarted.
+A worker must notify the master process once per timeout interval.
+If it fails do so, the worker is killed and a new worker is spawned
+to replace it.
 
 Generally set to thirty seconds. Only set this noticeably higher if
 you're sure of the repercussions for sync workers. For the non sync
@@ -459,7 +461,7 @@ accesslog
 
 The Access log file to write to.
 
-``'-'`` means log to stderr.
+``'-'`` means log to stdout.
 
 access_log_format
 ~~~~~~~~~~~~~~~~~
@@ -856,7 +858,7 @@ worker_exit
         def worker_exit(server, worker):
             pass
 
-Called just after a worker has been exited.
+Called in the worker, right before it terminates.
 
 The callable needs to accept two instance variables for the Arbiter and
 the just-exited Worker.

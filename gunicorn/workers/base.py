@@ -89,7 +89,11 @@ class Worker(object):
         if self.cfg.reload:
             def changed(fname):
                 self.log.info("Worker reloading: %s modified", fname)
-                os.kill(self.pid, signal.SIGQUIT)
+                self.alive = False
+                self.cfg.worker_int(self)
+                time.sleep(0.1)
+                sys.exit(0)
+
             self.reloader = Reloader(callback=changed)
             self.reloader.start()
 
@@ -98,7 +102,8 @@ class Worker(object):
             for k, v in self.cfg.env.items():
                 os.environ[k] = v
 
-        util.set_owner_process(self.cfg.uid, self.cfg.gid)
+        util.set_owner_process(self.cfg.uid, self.cfg.gid,
+                               initgroups=self.cfg.initgroups)
 
         # Reseed the random number generator
         util.seed()
@@ -113,13 +118,15 @@ class Worker(object):
         [util.close_on_exec(s) for s in self.sockets]
         util.close_on_exec(self.tmp.fileno())
 
+        self.wait_fds = self.sockets + [self.PIPE[0]]
+
         self.log.close_on_exec()
 
         self.init_signals()
 
-        self.cfg.post_worker_init(self)
-
         self.load_wsgi()
+
+        self.cfg.post_worker_init(self)
 
         # Enter main run loop
         self.booted = True
@@ -163,6 +170,9 @@ class Worker(object):
         if hasattr(signal, 'siginterrupt'):  # python >= 2.6
             signal.siginterrupt(signal.SIGTERM, False)
             signal.siginterrupt(signal.SIGUSR1, False)
+
+        if hasattr(signal, 'set_wakeup_fd'):
+            signal.set_wakeup_fd(self.PIPE[1])
 
     def handle_usr1(self, sig, frame):
         self.log.reopen_files()
@@ -245,4 +255,4 @@ class Worker(object):
 
     def handle_winch(self, sig, fname):
         # Ignore SIGWINCH in worker. Fixes a crash on OpenBSD.
-        return
+        self.log.debug("worker: SIGWINCH ignored.")

@@ -10,7 +10,7 @@ WSGI Bits
 How do I set SCRIPT_NAME?
 -------------------------
 
-By default ``SCRIPT_NAME`` is an empy string. The value could be set by
+By default ``SCRIPT_NAME`` is an empty string. The value could be set by
 setting ``SCRIPT_NAME`` in the environment or as an HTTP header.
 
 
@@ -143,6 +143,13 @@ this queue new connections will eventually start getting dropped.
 ::
 
     $ sudo sysctl -w net.core.somaxconn="2048"
+
+How can I disable the use of ``sendfile()``
+-------------------------------------------
+
+Disabling the use ``sendfile()`` can be done by using the ``--no-sendfile``
+setting or by setting the environment variable ``SENDFILE`` to 0.
+
 
 
 Troubleshooting
